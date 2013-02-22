@@ -15,7 +15,7 @@
 (extend-type clojure.lang.PersistentVector
   IConnectFourGrid
   (valid-move? [board [x y]]
-    (let [idx (+ x (* y 7))]
+    (let [idx (+ (long x) (* (long y) 7))]
       (and
        ;; the move is in bounds
        (< -1 idx (count board))
@@ -27,7 +27,7 @@
            (board (+ 7 idx))))))
 
   (make-move-no-check [board [x y] val]
-    (assoc board (+ x (* y 7)) val)))
+    (assoc board (+ (long x) (* (long y) 7)) val)))
 
 (defn ->VectorGrid
   "Constructs a 7x6 Connect Four grid, represented by a length-42
