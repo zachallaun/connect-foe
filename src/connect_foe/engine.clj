@@ -37,6 +37,15 @@
              (->VectorGrid)
              moves)))
 
+(defprotocol IConnectFourPlayer
+  (next-move [player]
+    "The next move, a number 0-6 representing the column."))
+
+(defrecord RandomPlayer [grid]
+  IConnectFourPlayer
+  (next-move [_]
+    (rand-nth (valid-moves grid))))
+
 (comment
   (let [grid (->VectorGrid)]
     (time (doseq [_ (range 1e6)]

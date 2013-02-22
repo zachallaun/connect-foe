@@ -42,3 +42,12 @@
 
          (set (valid-moves (->VectorGrid (repeat 6 [0 :r]))))
          => #{1 2 3 4 5 6})))
+
+(defn random-player-facts []
+  (all
+   (fact "RandomPlayer makes valid moves with a VectorGrid"
+         (doseq [_ (range 50)]
+           (let [grid (->VectorGrid)
+                 player (->RandomPlayer grid)
+                 move (next-move player)]
+             (valid-move? grid move) => truthy)))))
