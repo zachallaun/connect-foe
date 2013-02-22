@@ -1,10 +1,11 @@
 (ns connect-foe.engine)
 
 (defprotocol IConnectFourGrid
-  (valid-move? [grid move]
-    "`move` is an [x y] pair.")
+  (valid-move? [grid move])
   (make-move-no-check [grid move val]
-    "Makes the move without a validity check."))
+    "Makes the move without a validity check.")
+  (valid-moves [grid]
+    "Returns the set of valid moves."))
 
 (defn make-move
   "Makes a move if the move is valid; otherwise returns nil."
@@ -14,30 +15,39 @@
 
 (extend-type clojure.lang.PersistentVector
   IConnectFourGrid
-  (valid-move? [board [x y]]
-    (let [idx (+ (long x) (* (long y) 7))]
-      (and
-       ;; the move is in bounds
-       (< -1 idx (count board))
-       ;; the location is empty
-       (not (board idx))
-       ;; the move is on the bottom row
-       (or (<= 35 idx 41)
-           ;; or there is a piece under it
-           (board (+ 7 idx))))))
+  (valid-move? [grid column]
+    (and (< -1 column 7)
+         (< (count (grid column)) 6)))
 
-  (make-move-no-check [board [x y] val]
-    (assoc board (+ (long x) (* (long y) 7)) val)))
+  (make-move-no-check [grid column val]
+    (assoc grid column (conj (get grid column) val)))
+
+  (valid-moves [grid]
+    (filter (partial valid-move? grid) (range 7))))
 
 (defn ->VectorGrid
-  "Constructs a 7x6 Connect Four grid, represented by a length-42
-  vector. Index 0 represents the top left corner of the board.
+  "Constructs a 7x6 Connect Four grid, represented by a length-7
+  vector of 7 vectors, where each inner vector is a column with
+  index 0 representing the bottom row."
+  ([]
+     (vec (repeat 7 [])))
+  ([moves]
+     (reduce (fn [grid [column val]]
+               (make-move grid column val))
+             (->VectorGrid)
+             moves)))
 
-  init is an optional map of indicies to values used to populate
-  the grid."
-  ([] (->VectorGrid []))
-  ([init]
-     (reduce (fn [grid [idx val]]
-               (assoc grid idx val))
-             (vec (repeat 42 nil))
-             init)))
+(comment
+  (let [grid (->VectorGrid)]
+    (time (doseq [_ (range 1e6)]
+            (valid-move? grid 0))))
+
+  (let [grid (->VectorGrid)]
+    (time (doseq [_ (range 1e6)]
+            (make-move-no-check grid 0 :val))))
+
+  (let [grid (->VectorGrid)]
+    (time (doseq [_ (range 1e5)]
+            (vec (valid-moves grid)))))
+
+  )

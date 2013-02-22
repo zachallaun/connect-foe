@@ -10,45 +10,35 @@
    (fact "VectorGrids don't need an init"
          (->VectorGrid) => vector?)
 
-   (fact "VectorGrids are length 42"
-         (count (->VectorGrid)) => 42)
+   (fact "VectorGrids are length 7"
+         (count (->VectorGrid)) => 7)
 
    (fact "VectorGrids can be initialized"
-         ((->VectorGrid {0 :foobar}) 0) => :foobar)
+         (get (->VectorGrid [[0 :r]]) 0) => [:r])
 
-   (fact "valid moves cannot float"
-         (valid-move? (->VectorGrid) [0 0]) => falsey)
+   (fact "any non-full stack is valid"
+         (valid-move? (->VectorGrid) 0) => truthy
+         (valid-move? (->VectorGrid (repeat 5 [0 :r])) 0) => truthy)
 
-   (fact "bottom row is a valid move"
-         (valid-move? (->VectorGrid) [0 5]) => truthy
-         (valid-move? (->VectorGrid) [6 5]) => truthy)
-
-   (fact "on top of another piece is a valid move"
-         (valid-move? (assoc (->VectorGrid) 38 :b) [3 4]) => truthy)
-
-   (fact "same location as another piece is not a valid move"
-         (valid-move? (assoc (->VectorGrid) 38 :b) [3 5]) => falsey)
+   (fact "moving to a full stack is invalid"
+         (valid-move? (->VectorGrid (repeat 6 [0 :r])) 0) => falsey)
 
    (fact "valid moves are within the grid's bounds"
-         (valid-move? (->VectorGrid) [0 -1]) => falsey
-         (valid-move? (->VectorGrid) [7 5]) => falsey)
+         (valid-move? (->VectorGrid) -1) => falsey
+         (valid-move? (->VectorGrid) 7) => falsey)
 
-   (fact "make-move-no-check will make moves willy nilly"
-         (-> (->VectorGrid)
-             (make-move-no-check [0 0] :move)
-             (nth 0))
-         => :move
+   (fact "make-move checks validity"
+         (get (make-move (->VectorGrid) 0 :r) 0) => [:r]
 
-         (-> (->VectorGrid {0 :foo})
-             (make-move-no-check [0 0] :bar)
-             (nth 0))
-         => :bar)
+         (-> (->VectorGrid (repeat 6 [0 :r]))
+             (make-move 0 :r))
+         => nil?
 
-   (fact "make-move checks properly"
-         (make-move (->VectorGrid) [0 0] :move) => nil?
-         (make-move (->VectorGrid {41 :foo}) [6 5] :move) => nil?
+         (make-move (->VectorGrid) -1 :r) => nil?
+         (make-move (->VectorGrid) 7 :r) => nil?)
 
-         (-> (->VectorGrid {41 :foo})
-             (make-move [6 4] :bar)
-             (nth 34))
-         => :bar)))
+   (fact "can generate valid moves"
+         (set (valid-moves (->VectorGrid))) => #{0 1 2 3 4 5 6}
+
+         (set (valid-moves (->VectorGrid (repeat 6 [0 :r]))))
+         => #{1 2 3 4 5 6})))
