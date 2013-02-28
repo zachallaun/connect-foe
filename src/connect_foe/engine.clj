@@ -1,17 +1,26 @@
-(ns connect-foe.engine)
+(ns connect-foe.engine
+  (:require [connect-foe.client :as client]
+            [clojure.string :as string]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helpers
+
+(defn replace-index [s index character]
+  (str (subs s 0 index) character (subs s (inc index))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Protocols
 
 (defprotocol IConnectFourGrid
   (valid-move? [grid move])
-  (make-move-no-check [grid move val]
-    "Makes the move without a validity check.")
   (valid-moves [grid]
-    "Returns the set of valid moves."))
+    "Returns the set of valid moves.")
+  (make-move [grid move val]
+    "Makes the move if it's valid, or returns nil.")
+  (won? [grid]))
 
-(defn make-move
-  "Makes a move if the move is valid; otherwise returns nil."
-  [grid move val]
-  (when (valid-move? grid move)
-    (make-move-no-check grid move val)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Grids
 
 (extend-type clojure.lang.PersistentVector
   IConnectFourGrid
@@ -19,11 +28,12 @@
     (and (< -1 column 7)
          (< (count (grid column)) 6)))
 
-  (make-move-no-check [grid column val]
-    (assoc grid column (conj (get grid column) val)))
-
   (valid-moves [grid]
-    (filter (partial valid-move? grid) (range 7))))
+    (filter (partial valid-move? grid) (range 7)))
+
+  (make-move [grid column val]
+    (when (valid-move? grid column)
+      (assoc grid column (conj (get grid column) val)))))
 
 (defn ->VectorGrid
   "Constructs a 7x6 Connect Four grid, represented by a length-7
@@ -37,14 +47,52 @@
              (->VectorGrid)
              moves)))
 
-(defprotocol IConnectFourPlayer
-  (next-move [player]
-    "The next move, a number 0-6 representing the column."))
+(extend-type String
+  IConnectFourGrid
+  (valid-move? [grid column]
+    (= \space (nth grid column)))
 
-(defrecord RandomPlayer [grid]
-  IConnectFourPlayer
-  (next-move [_]
-    (rand-nth (valid-moves grid))))
+  (valid-moves [grid]
+    (filter (partial valid-move? grid) (range 7)))
+
+  (make-move [grid column val]
+    (when (valid-move? grid column)
+      (let [index (first (filter #(= \space (nth grid %))
+                                 (range (+ column 35) 0 -7)))]
+        (replace-index grid index val))))
+
+  (won? [grid]
+    (let [delimited-grid (string/join "|" (mapv #(apply str %)
+                                                (partition 7 grid)))
+          horizontal #"[^\| ]{4,}"
+          vertical   #"(.{7}r){4}|(.{7}b){4}"
+          r-diagonal #"(.{6}r){4}|(.{6}b){4}"
+          l-diagonal #"(.{8}r){4}|(.{8}b){4}"]
+      (some #(re-find % delimited-grid)
+            [horizontal vertical r-diagonal l-diagonal]))))
+
+(defn ->StringGrid
+  "Constructs a 7x6 Connect Four grid, represented by a length-42
+  string where index 0 is the top left corner of the grid."
+  []
+  (apply str (repeat 42 \space)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Players
+
+(defrecord RandomPlayer []
+  client/IArenaClient
+  (move [_ message]
+    (rand-nth (valid-moves (:board message))))
+  (begin [_ message]
+    (println "WAAAAAAAAAA"))
+  (game-over [_ message]
+    (println "OH DEAR GOD"))
+  (game-type [_]
+    "connectfour"))
+
+(defn start []
+  (client/issue-challenge (->RandomPlayer) "localhost" 4000))
 
 (comment
   (let [grid (->VectorGrid)]
