@@ -19,11 +19,9 @@
   (future
     (while true
       (let [message (.readLine (:in conn))]
-        (println message)
         (handler conn message)))))
 
 (defn write-to [^PrintWriter out msg]
-  (println msg)
   (doto out
     (.println msg)
     (.flush)))
@@ -33,7 +31,6 @@
 
 (defn dispatch-to [engine conn message]
   (let [message (json/read-str message :key-fn keyword)]
-    (println message)
     (cond
       (contains? message :timelimit)
       (begin engine message)

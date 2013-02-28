@@ -85,26 +85,30 @@
   (move [_ message]
     (rand-nth (valid-moves (:board message))))
   (begin [_ message]
-    (println "WAAAAAAAAAA"))
+    (println "Beginning random play."))
   (game-over [_ message]
-    (println "OH DEAR GOD"))
+    (println "Game over."))
   (game-type [_]
     "connectfour"))
 
-(defn start []
-  (client/issue-challenge (->RandomPlayer) "localhost" 4000))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Runner
 
-(comment
+(defn -main [& [ai host port]]
+  (let [ai (case ai
+             "random" (->RandomPlayer))
+        host (or host "localhost")
+        port (or (and port (int port)) 4000)]
+    (client/issue-challenge ai host port)))
+
+
+
+(comment 
   (let [grid (->VectorGrid)]
     (time (doseq [_ (range 1e6)]
             (valid-move? grid 0))))
-
-  (let [grid (->VectorGrid)]
-    (time (doseq [_ (range 1e6)]
-            (make-move-no-check grid 0 :val))))
-
+  
   (let [grid (->VectorGrid)]
     (time (doseq [_ (range 1e5)]
             (vec (valid-moves grid)))))
-
   )
